@@ -18,7 +18,7 @@
 # RootModule = ''
 
 # Version number of this module.
-ModuleVersion = '1.0.0.0'
+ModuleVersion = '1.0.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -58,8 +58,8 @@ PowerShellVersion = '5.0'
 
 # Modules that must be imported into the global environment prior to importing this module
 RequiredModules = @(
-    @{ModuleName = 'APEXCP.Azure.API.SysBringup'; ModuleVersion = '1.0.0.0' }
-    @{ModuleName = 'APEXCP.Azure.API.Certificate'; ModuleVersion = '1.0.0.0' }
+    @{ModuleName = 'APEXCP.Azure.API.SysBringup'; ModuleVersion = '1.0.0' }
+    @{ModuleName = 'APEXCP.Azure.API.Certificate'; ModuleVersion = '1.0.0' }
     )
 
 # Assemblies that must be loaded prior to importing this module
