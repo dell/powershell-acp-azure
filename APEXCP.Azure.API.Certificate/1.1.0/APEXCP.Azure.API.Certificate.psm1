@@ -4,11 +4,10 @@
 # Use of this software and the intellectual property contained therein is expressly limited to the terms and
 # conditions of the License Agreement under which it is provided by or on behalf of Dell Inc. or its subsidiaries.
 
-$IPV6_ADDR_PATTERN = "^((([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,7}:)|(([0-9A-Fa-f]{1,4}:){6}:[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){5}(:[0-9A-Fa-f]{1,4}){1,2})|(([0-9A-Fa-f]{1,4}:){4}(:[0-9A-Fa-f]{1,4}){1,3})|(([0-9A-Fa-f]{1,4}:){3}(:[0-9A-Fa-f]{1,4}){1,4})|(([0-9A-Fa-f]{1,4}:){2}(:[0-9A-Fa-f]{1,4}){1,5})|([0-9A-Fa-f]{1,4}:(:[0-9A-Fa-f]{1,4}){1,6})|(:(:[0-9A-Fa-f]{1,4}){1,7})|(([0-9A-Fa-f]{1,4}:){6}(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|(([0-9A-Fa-f]{1,4}:){5}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|(([0-9A-Fa-f]{1,4}:){4}(:[0-9A-Fa-f]{1,4}){0,1}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|(([0-9A-Fa-f]{1,4}:){3}(:[0-9A-Fa-f]{1,4}){0,2}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|(([0-9A-Fa-f]{1,4}:){2}(:[0-9A-Fa-f]{1,4}){0,3}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|([0-9A-Fa-f]{1,4}:(:[0-9A-Fa-f]{1,4}){0,4}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|(:(:[0-9A-Fa-f]{1,4}){0,5}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}))$"
 
 $currentPath = $PSScriptRoot.Substring(0,$PSScriptRoot.LastIndexOf("\"))
-$currentVersion = $PSScriptRoot.Substring($PSScriptRoot.LastIndexOf("\") + 1, $PSScriptRoot.Length - ($PSScriptRoot.LastIndexOf("\") + 1))
-$commonPath = $currentPath.Substring(0,$currentPath.LastIndexOf("\")) + "\APEXCP.Azure.API.Common\" + $currentVersion + "\APEXCP.Azure.API.Common.ps1"
+$commonVersion = "1.0.0"
+$commonPath = $currentPath.Substring(0,$currentPath.LastIndexOf("\")) + "\APEXCP.Azure.API.Common\" + $commonVersion + "\APEXCP.Azure.API.Common.ps1"
 . "$commonPath"
 
 
@@ -22,6 +21,19 @@ Required. APEX Cloud Platform Manager IP address.
 
 .PARAMETER Cert
 Required. LDAPs certificate file path.
+The format of the LDAPs certificate file need to follow the following format:
+[
+	{
+        "cert_type": "ROOT",
+        "cert": "-----BEGIN CERTIFICATE-----\n<raw cert content>\n-----END CERTIFICATE-----"
+    },
+	{
+        "cert_type": "INTERMEDIATE",
+        "cert": "-----BEGIN CERTIFICATE-----\n<raw cert content>\n-----END CERTIFICATE-----"
+	},
+    ...
+]
+The supported cert_type are ROOT and INTERMEDIATE.
 
 .Notes
 You can run this cmdlet to start system bring up or restart system bring up if failed.
@@ -47,15 +59,7 @@ function Initialize-LDAPsCertificate {
     $uri = "/rest/apex-cp/v1/ldaps-certs/initialize"
     $url = Get-Url -Server $Server -Uri $uri
 
-    $cert_contents = Get-Content -Path $Cert
-    $result = $cert_contents -join "\n"
-    $list = @{
-        "cert_type" = "ROOT"
-        "cert" = $result
-	}
-	$data = @()
-	$data += $list
-	$body = (ConvertTo-Json $data).Replace("\\n","\n")
+    $body = Get-Content -Path $Cert
 
     try {
         $psVersion = $PSVersionTable.PSVersion.Major
@@ -69,7 +73,7 @@ function Initialize-LDAPsCertificate {
         Write-Host $responseJson
 
     } catch {
-        Handle-RestMethodInvokeException -URL $url
+        Write-RestMethodInvokeException -URL $url
     }
 }
 
@@ -81,7 +85,7 @@ Handle exception of REST API calling
 .PARAMETER URL
 Required. Rest API URL
 #>
-function Handle-RestMethodInvokeException {
+function Write-RestMethodInvokeException {
     param(
         [Parameter(Mandatory = $true)]
         # Rest API URL
