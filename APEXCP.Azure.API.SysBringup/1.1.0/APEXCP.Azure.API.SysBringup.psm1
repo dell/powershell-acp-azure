@@ -4,11 +4,10 @@
 # Use of this software and the intellectual property contained therein is expressly limited to the terms and
 # conditions of the License Agreement under which it is provided by or on behalf of Dell Inc. or its subsidiaries.
 
-$IPV6_ADDR_PATTERN = "^((([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,7}:)|(([0-9A-Fa-f]{1,4}:){6}:[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){5}(:[0-9A-Fa-f]{1,4}){1,2})|(([0-9A-Fa-f]{1,4}:){4}(:[0-9A-Fa-f]{1,4}){1,3})|(([0-9A-Fa-f]{1,4}:){3}(:[0-9A-Fa-f]{1,4}){1,4})|(([0-9A-Fa-f]{1,4}:){2}(:[0-9A-Fa-f]{1,4}){1,5})|([0-9A-Fa-f]{1,4}:(:[0-9A-Fa-f]{1,4}){1,6})|(:(:[0-9A-Fa-f]{1,4}){1,7})|(([0-9A-Fa-f]{1,4}:){6}(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|(([0-9A-Fa-f]{1,4}:){5}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|(([0-9A-Fa-f]{1,4}:){4}(:[0-9A-Fa-f]{1,4}){0,1}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|(([0-9A-Fa-f]{1,4}:){3}(:[0-9A-Fa-f]{1,4}){0,2}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|(([0-9A-Fa-f]{1,4}:){2}(:[0-9A-Fa-f]{1,4}){0,3}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|([0-9A-Fa-f]{1,4}:(:[0-9A-Fa-f]{1,4}){0,4}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3})|(:(:[0-9A-Fa-f]{1,4}){0,5}:(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}))$"
 
 $currentPath = $PSScriptRoot.Substring(0,$PSScriptRoot.LastIndexOf("\"))
-$currentVersion = $PSScriptRoot.Substring($PSScriptRoot.LastIndexOf("\") + 1, $PSScriptRoot.Length - ($PSScriptRoot.LastIndexOf("\") + 1))
-$commonPath = $currentPath.Substring(0,$currentPath.LastIndexOf("\")) + "\APEXCP.Azure.API.Common\" + $currentVersion + "\APEXCP.Azure.API.Common.ps1"
+$commonVersion = "1.0.0"
+$commonPath = $currentPath.Substring(0,$currentPath.LastIndexOf("\")) + "\APEXCP.Azure.API.Common\" + $commonVersion + "\APEXCP.Azure.API.Common.ps1"
 . "$commonPath"
 
 
@@ -17,14 +16,14 @@ $commonPath = $currentPath.Substring(0,$currentPath.LastIndexOf("\")) + "\APEXCP
 Start system bring up workflow
 
 .PARAMETER Server
-Required. Primary Host IP address with OS_PROVISION mode or APEX Cloud Platform Manager IP address for CLUSTER_DEPLOYMENT mode.
+Required. Primary Host IP address with OS_PROVISION mode or APEX Cloud Platform Manager IP address for LTP_REGISTRATION or CLUSTER_DEPLOYMENT mode.
 
 .PARAMETER Conf
 Required. Json configuration file as the body of system bring up API
 
 .PARAMETER Mode
-Required. System Bringup mode. The supported values are OS_PROVISION and CLUSTER_DEPLOYMENT.
-Install Azure OS with OS_PROVISION and Deploy cluster with CLUSTER_DEPLOYMENT
+Required. System Bringup mode. The supported values are OS_PROVISION, LTP_REGISTRATION and CLUSTER_DEPLOYMENT.
+Install Azure OS with OS_PROVISION, Register Azure Nodes with LTP_REGISTRATION and Deploy cluster with CLUSTER_DEPLOYMENT
 
 .Notes
 You can run this cmdlet to start system bring up or restart system bring up if failed.
@@ -33,7 +32,8 @@ You can run this cmdlet to start system bring up or restart system bring up if f
 PS> Start-SystemBringup -Server <APEX Cloud Platform Manager IP or Primary host IP> -Conf <Json file to the path> -Mode <system Bringup mode>
 
 1.Start to install Azure Stack HCI OS through Primary host, with the specified json configuration input in OS_PROVISION mode
-2.Start to deploy cluster through APEX Cloud Platform Manager, with specified json configuration input in CLUSTER_DEPLOYMENT mode
+2.Start to register Azure nodes through APEX Cloud Platform Manager, with specified json configuration input in LTP_REGISTRATION mode
+3.Start to deploy cluster through APEX Cloud Platform Manager, with specified json configuration input in CLUSTER_DEPLOYMENT mode
 #>
 function Start-SystemBringup {
     param(
@@ -47,7 +47,7 @@ function Start-SystemBringup {
         [String] $Conf,
 
         [Parameter(Mandatory = $true)]
-        [ValidateSet('OS_PROVISION','CLUSTER_DEPLOYMENT')]
+        [ValidateSet('OS_PROVISION','LTP_REGISTRATION','CLUSTER_DEPLOYMENT')]
         # Initialize mode
         [String] $Mode
 
@@ -72,7 +72,7 @@ function Start-SystemBringup {
             Write-Host $responseJson
         }
     } catch {
-        Handle-RestMethodInvokeException -URL $url -Exception $_
+        Write-RestMethodInvokeException -URL $url -Exception $_
     }
 }
 
@@ -100,9 +100,11 @@ function Build-RestMethodURL{
     )
 
     if ($Mode -eq "OS_PROVISION") {
-        $uri = "/rest/apex-cp/v1/system/initialize?mode=OS_PROVISION"
-    } else{
-        $uri = "/rest/apex-cp/v1/system/initialize?mode=CLUSTER_DEPLOYMENT"
+        $uri = "/rest/apex-cp/v2/system/initialize?mode=OS_PROVISION"
+    } elseif ($Mode -eq "LTP_REGISTRATION") {
+        $uri = "/rest/apex-cp/v2/system/initialize?mode=LTP_REGISTRATION"
+    } else {
+        $uri = "/rest/apex-cp/v2/system/initialize?mode=CLUSTER_DEPLOYMENT"
     }
     $url = Get-Url -Server $Server -Uri $uri
 
@@ -119,7 +121,7 @@ Required. Rest API URL
 .PARAMETER Msg
 Required. Additional error message
 #>
-function Handle-RestMethodInvokeException {
+function Write-RestMethodInvokeException {
     param(
         [Parameter(Mandatory = $true)]
         # Rest API URL
@@ -178,14 +180,14 @@ function Handle-RestMethodInvokeException {
 Get progress status of system bring up
 
 .PARAMETER CloudPlatformManagerIP
-APEX Cloud Platform Manager IP address is required for OS_PROVISION and CLUSTER_DEPLOYMENT mode.
+APEX Cloud Platform Manager IP address is required for OS_PROVISION, LTP_REGISTRATION and CLUSTER_DEPLOYMENT mode.
 
 .PARAMETER PrimaryHostIP
 Primary Host IP address is required for OS_PROVISION mode.
-Primary Host IP address is not used for CLUSTER_DEPLOYMENT mode.
+Primary Host IP address is not used for LTP_REGISTRATION and CLUSTER_DEPLOYMENT mode.
 
 .PARAMETER Mode
-Required. System Bringup mode. The supported values are OS_PROVISION and CLUSTER_DEPLOYMENT.
+Required. System Bringup mode. The supported values are OS_PROVISION, LTP_REGISTRATION and CLUSTER_DEPLOYMENT.
 
 # .Notes
 You can run this cmdlet to query progress status of system bring up
@@ -198,7 +200,7 @@ PS> Get-BringupProgressStatus -CloudPlatformManagerIP <APEX Cloud Platform Manag
 .EXAMPLE
 PS> Get-BringupProgressStatus -CloudPlatformManagerIP <APEX Cloud Platform Manager IP> -Mode <system Bringup mode>
 
-2.Gets progress status of cluster deploy progress through APEX Cloud Platform Manager in CLUSTER_DEPLOYMENT mode
+2.Gets progress status of cluster deploy progress through APEX Cloud Platform Manager in LTP_REGISTRATION or CLUSTER_DEPLOYMENT mode
 
 #>
 function Get-BringupProgressStatus{
@@ -212,19 +214,19 @@ function Get-BringupProgressStatus{
         [String] $PrimaryHostIP,
 
         [Parameter(Mandatory = $true)]
-        [ValidateSet('OS_PROVISION','CLUSTER_DEPLOYMENT')]
+        [ValidateSet('OS_PROVISION','LTP_REGISTRATION','CLUSTER_DEPLOYMENT')]
         # Initialize mode
         [String] $Mode
     )
 
-    if ($mode -eq "OS_PROVISION") {
-        Monitor-OSProvisionStatus -CloudPlatformManagerIP $CloudPlatformManagerIP -PrimaryHostIP $PrimaryHostIP
+    if ($Mode -eq "OS_PROVISION") {
+        Get-OSProvisionStatus -CloudPlatformManagerIP $CloudPlatformManagerIP -PrimaryHostIP $PrimaryHostIP
     } else {
-        Monitor-ClusterDeploymentStatus -CloudPlatformManagerIP $CloudPlatformManagerIP
+        Get-ClusterSetupStatus -CloudPlatformManagerIP $CloudPlatformManagerIP -Mode $Mode
     }
 }
 
-function Monitor-OSProvisionStatus {
+function Get-OSProvisionStatus {
     param(
         [String] $CloudPlatformManagerIP,
         [String] $PrimaryHostIP
@@ -245,7 +247,7 @@ function Monitor-OSProvisionStatus {
             return
         }
     }
-    $uri = "/rest/apex-cp/v1/system/initialize/status?mode=OS_PROVISION"
+    $uri = "/rest/apex-cp/v2/system/initialize/status?mode=OS_PROVISION"
 
     $OSProvisionDisconnectTimeout = 2*3600
     $OSProvisionDisconnectStep = "OS Provisioning For Primary Node"
@@ -253,23 +255,23 @@ function Monitor-OSProvisionStatus {
 
     $url = Get-Url -Server $Server -Uri $uri
     try {
-        $response, $exception = Get-Status -Url $url
+        $response, $exception = Get-Status -Url $url -Mode "OS_PROVISION"
         if (-not $exception) {
             return
         }
 
-        $Conn = Test-Connection $Server -count 1 -Quiet
+        $Conn = IsServerAlive $Server
         if (-not $Conn -and ($null -ne $response) -and ($response.step.contains($OSProvisionDisconnectStep)) -and ($Server -eq $PrimaryHostIP) ) {
             # wait for primary node provision complete
             $TimeoutMessage = "Failed to complete OS Provisioning within $OSProvisionDisconnectTimeout seconds. "
             $TimeoutMessage += "Please check whether the Azure Stack HCI OS is being installed on the specified hosts and try it later..."
-            $connected = Monitor-DisconnectStatus -Server $CloudPlatformManagerIP -Timeout $OSProvisionDisconnectTimeout -MessagePrefix "OS Provisioning For Primary Node" -TimeoutMessage $TimeoutMessage
+            $connected = Get-DisconnectStatus -Server $CloudPlatformManagerIP -Timeout $OSProvisionDisconnectTimeout -MessagePrefix "OS Provisioning For Primary Node" -TimeoutMessage $TimeoutMessage
             if (-not $connected) {
                 return
             }
             # check result again after Cloud Platform Manager is available
             $url = Get-Url -Server $CloudPlatformManagerIP -Uri $uri
-            $response, $exception = Get-Status -Url $url
+            $response, $exception = Get-Status -Url $url -Mode "OS_PROVISION"
             if (-not $exception) {
                 return
             }
@@ -279,14 +281,25 @@ function Monitor-OSProvisionStatus {
             throw $exception
         }
     } catch {
-        Handle-RestMethodInvokeException -URL $url -Exception $_
+        Write-RestMethodInvokeException -URL $url -Exception $_
     }
 }
 
-function Monitor-ClusterDeploymentStatus {
+function Get-ClusterSetupStatus {
     param(
-        [String] $CloudPlatformManagerIP
+        [String] $CloudPlatformManagerIP,
+        [String] $Mode
     )
+
+    if ($Mode -eq "LTP_REGISTRATION") {
+        $displayMessage = "LTP registration"
+        $DisconnectTimeout = 1800
+        $MaxDisconnectCount = 3
+    } else {
+        $displayMessage = "cluster deployment"
+        $DisconnectTimeout = 1800
+        $MaxDisconnectCount = 5
+    }
 
     $CloudPlatformManageConn = Test-Connection $CloudPlatformManagerIP -count 1 -Quiet
     if (-not $CloudPlatformManageConn) {
@@ -295,22 +308,14 @@ function Monitor-ClusterDeploymentStatus {
         return
     }
 
-    $ClusterDeploymentDisconnectTimeout = 1800
-    $ClusterDeploymentDisconnectStep = @(
-        "Disable Unused Network Adapter",
-        "Restart Nodes and Wait it up",
-        "Monitor Cluster Deployment Progress",
-        "Rename Non-primary Server's Hostname",
-        "Rename Primary Server's Hostname")
-    $MaxDisconnectCount = 5
-    $uri = "/rest/apex-cp/v1/system/initialize/status?mode=CLUSTER_DEPLOYMENT"
+    $uri = "/rest/apex-cp/v2/system/initialize/status?mode=$Mode"
     $url = Get-Url -Server $CloudPlatformManagerIP -Uri $uri
 
     $DisconnectCount = 0
     $DisconnectStep = $null
     try {
         while ($DisconnectCount -lt $MaxDisconnectCount) {
-            $response, $exception = Get-Status -Url $url
+            $response, $exception = Get-Status -Url $url -Mode $Mode
             if (-not $exception) {
                 return
             }
@@ -322,19 +327,12 @@ function Monitor-ClusterDeploymentStatus {
                 $DisconnectStep = $response.step
             }
             $DisconnectCount += 1
-            Write-Host "Cloud Platform Manager disconnected during cluster deployment, attempt $DisconnectCount ..."
-            $Conn = Test-Connection $CloudPlatformManagerIP -count 1 -Quiet
-            $ExpectedDisconnectStep = $false
-            foreach ($step in $ClusterDeploymentDisconnectStep) {
-                if ($DisconnectStep.contains($step)) {
-                    $ExpectedDisconnectStep = $true
-                    break
-                }
-            }
-            if (-not $Conn -and $ExpectedDisconnectStep) {
+            Write-Host "Cloud Platform Manager disconnected during $displayMessage, attempt $DisconnectCount ..."
+            $Conn = IsServerAlive $CloudPlatformManagerIP
+            if (-not $Conn) {
                 # wait for cloud platform manager reconnection
-                $TimeoutMessage = "Failed to reconnect Cloud Platform Manager within $ClusterDeploymentDisconnectTimeout seconds. Please try it later..."
-                $connected = Monitor-DisconnectStatus -Server $CloudPlatformManagerIP -Timeout $ClusterDeploymentDisconnectTimeout -MessagePrefix "Cluster Deployment" -TimeoutMessage $TimeoutMessage
+                $TimeoutMessage = "Failed to reconnect Cloud Platform Manager within $DisconnectTimeout seconds. Please try it later..."
+                $connected = Get-DisconnectStatus -Server $CloudPlatformManagerIP -Timeout $DisconnectTimeout -MessagePrefix $displayMessage -TimeoutMessage $TimeoutMessage
                 if (-not $connected) {
                     return
                 }
@@ -344,26 +342,26 @@ function Monitor-ClusterDeploymentStatus {
             }
         }
         if ($DisconnectCount -eq $MaxDisconnectCount) {
-            Write-Host "Failed to complete Cluster Deployment within $MaxDisconnectCount attempts. "
+            Write-Host "Failed to complete $displayMessage within $MaxDisconnectCount attempts. "
         }
         if ($exception) {
             Write-Error $exception.Exception.Message
             throw $exception
         }
     } catch {
-        Write-Host "Unexpected exception during monitoring cluster deployment status: $_"
-        Handle-RestMethodInvokeException -URL $url -Exception $_
+        Write-Host "Unexpected exception during monitoring $displayMessage status: $_"
+        Write-RestMethodInvokeException -URL $url -Exception $_
     }
 }
 
-function Monitor-DisconnectStatus {
+function Get-DisconnectStatus {
     param(
         [String] $Server,
-        [String] $Timeout,
+        [Int] $Timeout,
         [String] $MessagePrefix,
         [String] $TimeoutMessage
     )
-    
+
     $SleepInterval = 60
     Write-Host "$MessagePrefix is in progress, please wait for a while..."
     $startTimestamp = [DateTimeOffset]::Now.ToUnixTimeSeconds()
@@ -377,7 +375,7 @@ function Monitor-DisconnectStatus {
         $Connection = Test-Connection $Server -count 1 -Quiet
         if ($Connection) {
             # check day1 service status
-            $url = Get-Url -Server $Server -Uri "/rest/apex-cp/v1/system/initialize/status"
+            $url = Get-Url -Server $Server -Uri "/rest/apex-cp/v2/system/initialize/status"
             $response, $exception = Send-RestAPI -Url $Url
             if ($exception.Exception.Response -and $exception.Exception.Response.StatusCode -eq "InternalServerError") {
                 break
@@ -390,7 +388,8 @@ function Monitor-DisconnectStatus {
 
 function Get-Status{
     param(
-        [String] $Url
+        [String] $Url,
+        [String] $Mode
     )
 
     $SleepInterval = 8
@@ -402,7 +401,7 @@ function Get-Status{
             return $response, $exception
         }
 
-        cls
+        Clear-Host
 
         Write-Host "------------------------Response Begin------------------------"
         Write-Host "Query Seq          : "$i
@@ -416,6 +415,10 @@ function Get-Status{
         if ($Mode -eq "OS_PROVISION")
         {
             $filePath = $UserPSModuleLocation + "\Bootstap_Bringup_Progress_Status.json"
+        }
+        elseif ($Mode -eq "LTP_REGISTRATION")
+        {
+            $filePath = $UserPSModuleLocation + "\LTP_Registration_Progress_Status.json"
         }
         else
         {
@@ -434,6 +437,8 @@ function Get-Status{
         {
             if ($Mode -eq "OS_PROVISION") {
                 Write-Host "Azure Stack HCI OS install in failed status. Please check detailed response file for more or restart bring up process"
+            } elseif ($Mode -eq "LTP_REGISTRATION") {
+                Write-Host "LTP registration in failed status. Please check detailed response file for more or restart bring up process"
             } else {
                 Write-Host "Cluster deploy in failed status. Please check detailed response file for more or restart bring up process"
             }
@@ -443,6 +448,8 @@ function Get-Status{
         {
             if ($Mode -eq "OS_PROVISION") {
                 Write-Host "Azure Stack HCI OS installation successfully completed!"
+            } elseif ($Mode -eq "LTP_REGISTRATION") {
+                Write-Host "LTP registration successfully completed!"
             } else {
                 Write-Host "Cluster deployment system bring up successfully completed!"
             }
@@ -457,7 +464,7 @@ function Send-RestAPI {
     param(
         [String] $Url
     )
-    
+
     $psVersion = $PSVersionTable.PSVersion.Major
     try {
         if ($psVersion -eq 5)
@@ -472,4 +479,20 @@ function Send-RestAPI {
         return $response, $_
     }
     return $response, $null
+}
+
+function IsServerAlive {
+    param(
+        [String] $Server
+    )
+    $Conn = Test-Connection $Server -count 1 -Quiet
+    if (-not $Conn) {
+        return $false
+    }
+    $url = Get-Url -Server $Server -Uri "/rest/apex-cp/v2/system/initialize/status"
+    $response, $exception = Send-RestAPI -Url $Url
+    if ($exception.Exception.Response -and $exception.Exception.Response.StatusCode -eq "BadGateway") {
+        return $false
+    }
+    return $true
 }

@@ -5,8 +5,8 @@
 # conditions of the License Agreement under which it is provided by or on behalf of Dell Inc. or its subsidiaries.
 
 $currentPath = $PSScriptRoot.Substring(0,$PSScriptRoot.LastIndexOf("\"))
-$currentVersion = $PSScriptRoot.Substring($PSScriptRoot.LastIndexOf("\") + 1, $PSScriptRoot.Length - ($PSScriptRoot.LastIndexOf("\") + 1))
-$commonPath = $currentPath.Substring(0,$currentPath.LastIndexOf("\")) + "\APEXCP.Azure.API.Common\" + $currentVersion + "\APEXCP.Azure.API.Common.ps1"
+$commonVersion = "1.0.0"
+$commonPath = $currentPath.Substring(0,$currentPath.LastIndexOf("\")) + "\APEXCP.Azure.API.Common\" + $commonVersion + "\APEXCP.Azure.API.Common.ps1"
 . "$commonPath"
 
 <#
@@ -17,7 +17,7 @@ Handle exception of REST API calling
 Required. Rest API URL
 
 #>
-function Handle-RestMethodInvokeException {
+function Write-RestMethodInvokeException {
     param(
         [Parameter(Mandatory = $true)]
         # Rest API URL
@@ -84,7 +84,7 @@ function Get-AutoDiscoveryHosts {
 
 
     } catch {
-        Handle-RestMethodInvokeException -URL $url
+        Write-RestMethodInvokeException -URL $url
     }
 }
 
